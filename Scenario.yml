@@ -1,0 +1,119 @@
+messages:
+    - register: !CaptureRegister &register
+        destination: "{temp_id}"
+        message:
+            temporary_robot_id: "{temp_id}"
+            video_url: nc:127.0.0.1:9011
+            image: this is an image of the robot
+    - registered: !CaptureRegistered &registered
+        destination: "{temp_id}"
+        message:
+            robot_id: "{true_id}"
+            team: "{true_team}"
+    - hello: !CaptureHello &hello
+        destination: TEST1
+        message:
+            name: Player
+    - welcome: !CaptureWelcome &welcome
+        destination: "{id}"
+        message:
+            robot: "Small Robot"
+            team: team_red
+            id: "{id}"
+            video_address: "http://video.url"
+            video_port: 123
+    - robot_state: !CaptureServerRobotState &robot_state
+        destination: "{true_id}"
+        message:
+            colour:
+                - timestamp: 4142434445
+                  status: "{status}"
+                  colour: "{colour}"
+            ultrasound:
+                timestamp: 4142434445
+                distance: "{distance}"
+            battery:
+                timestamp: 4142434445
+                voltage_millivolt: "{voltage}"
+
+sockets:
+    - !SocketSubscribe &subscribe_socket
+        port: 9000
+    - !SocketPush &push_socket
+        port: 9001
+
+threads:
+    - !Thread
+        name: "Register and send RobotState to capture a Flag"
+        loop: False
+        in_socket: *subscribe_socket
+        out_socket: *push_socket
+        flow:
+            - !Out
+                message: *register
+                arguments:
+                    temp_id: "123"
+            - !In
+                message: *registered
+            - !Equal
+                values:
+                    - "robot_one"
+                    - "{Registered[-1].true_id}"
+            - !UserInput
+                text: "About to send Hello message"
+            - !Out
+                message: *hello
+            - !In
+                message: *welcome
+            - !UserInput
+                text: "About to send ServerRobotState messages (with failed capture)"
+            - !Sleep
+                seconds: 2
+            - !Out
+                message: *robot_state
+                arguments:
+                    true_id: "{Registered[-1].true_id}"
+                    status: 1
+                    colour: 1 # frontier
+                    distance: 120
+                    voltage: 8200
+            - !Out
+                message: *robot_state
+                arguments:
+                    true_id: "{Registered[-1].true_id}"
+                    status: 1
+                    colour: 3 # blue
+                    distance: 120
+                    voltage: 8200
+            - !Sleep
+                seconds: 1
+            - !Out
+                message: *robot_state
+                arguments:
+                    true_id: "{Registered[-1].true_id}"
+                    status: 1
+                    colour: 1 # frontier
+                    distance: 120
+                    voltage: 8200
+            - !UserInput
+                text: "About to send ServerRobotState messages (with successful capture)"
+            - !Sleep
+                seconds: 2
+            - !Out
+                message: *robot_state
+                arguments:
+                    true_id: "{Registered[-1].true_id}"
+                    status: 1
+                    colour: 3 # blue
+                    distance: 120
+                    voltage: 8200
+            - !Sleep
+                seconds: 3
+            - !Out
+                message: *robot_state
+                arguments:
+                    true_id: "{Registered[-1].true_id}"
+                    status: 1
+                    colour: 1 # frontier
+                    distance: 80
+                    voltage: 8200

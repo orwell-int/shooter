@@ -1,0 +1,17 @@
+messages:
+
+sockets:
+    - !SocketSubscribe &subscribe_socket
+        port: 9000
+    - !SocketPush &push_socket
+        port: 9001
+
+threads:
+    - !Thread
+        name: "Sleep"
+        loop: False
+        in_socket: *subscribe_socket
+        out_socket: *push_socket
+        flow:
+            - !Sleep
+                seconds: 1
