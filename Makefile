@@ -17,4 +17,4 @@ clean: env/bin/activate
 	. env/bin/activate && coverage erase
 
 start: env/bin/activate
-	. env/bin/activate && python ./orwell/shooter/main.py
+	. env/bin/activate && python ./orwell/shooter/main.py Standalone.yml -d 1

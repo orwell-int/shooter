@@ -200,7 +200,7 @@ class In(yaml.YAMLObject, Exchange):
             logger.warning("Exception in In.step:" + str(ex))
             zmq_message = None
         if (zmq_message):
-            logger.debug("received zmq message %s" % repr(zmq_message))
+            logger.info("received zmq message %s" % repr(zmq_message))
             message = yaml2protobuf.Capture.create_from_zmq(zmq_message)
             if (message.message_type != self.message.message_type):
                 zmq_message = None
@@ -404,17 +404,19 @@ class Thread(yaml.YAMLObject):
     def step(self):
         logger = logging.getLogger(__name__)
         if (self.has_more_steps):
-            logger.info("In thread '{name}'".format(name=self.name))
+            logger.info("In thread '{name}' at step {index}".format(
+                name=self.name, index=self.index))
             result, inc = self.flow[self.index].step()
-            logger.debug("In thread '{name}': "
-                  "index = {index} ; result = {result} ; inc = {inc}".format(
-                      name=self.name,
-                      index=self.index,
-                      result=repr(result),
-                      inc=inc))
+            logger.debug(
+                "In thread '{name}': "
+                "index = {index} ; result = {result} ; inc = {inc}".format(
+                    name=self.name,
+                    index=self.index,
+                    result=repr(result),
+                    inc=inc))
             if (result is not None and not result):
                 error_message = "Failure at index {} in thread '{}'.".format(
-                    self.index, self.name)
+                        self.index, self.name)
                 raise Exception(error_message)
             if (inc):
                 self.index = (self.index + 1)
@@ -522,3 +524,14 @@ class UserInput(yaml.YAMLObject):
 
     def __repr__(self):
         return "{UserInput}"
+
+
+def configure_logging(verbose):
+    logger = logging.getLogger(__name__)
+    handler = logging.StreamHandler()
+    logger.addHandler(handler)
+    if (verbose):
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+    yaml2protobuf.configure_logging(verbose)

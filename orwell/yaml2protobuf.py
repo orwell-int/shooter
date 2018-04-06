@@ -431,6 +431,16 @@ def get_classes_from_module(module):
     return classes_and_modules
 
 
+def configure_logging(verbose):
+    logger = logging.getLogger(__name__)
+    handler = logging.StreamHandler()
+    logger.addHandler(handler)
+    if (verbose):
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
+
+
 def generate():
     """Used to generate code with cog."""
     import orwell.messages.controller_pb2 as pb_controller

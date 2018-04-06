@@ -29,6 +29,7 @@ def main(argv=sys.argv[1:]):
         log.setLevel(logging.DEBUG)
     else:
         log.setLevel(logging.INFO)
+    scen.configure_logging(arguments.verbose)
     scenario_file = arguments.scenario_file
     delay = arguments.delay
     log.debug('Open file "{}" as YAML scenario.'.format(scenario_file))
