@@ -1,0 +1,46 @@
+messages:
+    - register: !CaptureRegister &register
+        destination: "{id}"
+        message:
+            temporary_robot_id: temp_id
+            video_url: "http://127.0.0.1:10000"
+            image: "None for now"
+    - registered: !CaptureRegistered &registered
+        destination: "{id}"
+        message:
+            robot_id: "{robot_id}"
+            team: "{team}"
+    - server_robot_state: !CaptureServerRobotState &server_robot_state
+        destination: "{id}"
+        message:
+            rfid:
+                - timestamp: 42
+                  status: 1
+                  rfid: "123456"
+
+sockets:
+    - !SocketPush &push
+        port: 9001
+        bind: no
+    - !SocketSubscribe &subscribe
+        port: 9000
+        bind: no
+
+threads:
+    - !Thread
+        name: "fake proxy"
+        loop: True
+        in_socket: *subscribe
+        out_socket: *push
+        flow:
+            - !Out
+                message: *register
+                arguments:
+                    id: "random_id"
+            - !In
+                message: *registered
+            - !Out
+                message: *server_robot_state
+                arguments:
+                    id: "{Registered[0].robot_id}"
+

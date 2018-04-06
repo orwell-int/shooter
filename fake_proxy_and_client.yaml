@@ -1,0 +1,132 @@
+messages:
+    - register: !CaptureRegister &register
+        destination: "{id}"
+        message:
+            temporary_robot_id: temp_id
+            video_url: "http://127.0.0.1:10000"
+            image: "None for now"
+    - registered: !CaptureRegistered &registered
+        destination: "{id}"
+        message:
+            robot_id: "{robot_id}"
+            team: "{team}"
+    - server_robot_state: !CaptureServerRobotState &server_robot_state
+        destination: "{id}"
+        message:
+            rfid:
+                - timestamp: 42
+                  status: 1
+                  rfid: "123456"
+    - ping: !CapturePing &ping
+        destination: "{id}"
+        message:
+            timing:
+                - logger: "{logger_1}"
+                  timestamp: "{timestamp_1}"
+                - logger: "{logger_2}"
+                  timestamp: "{timestamp_2}"
+    - pong: !CapturePong &pong
+        destination: "{id}"
+        message:
+            timing:
+                - logger: "{logger_1}"
+                  timestamp: "{timestamp_1}"
+                - logger: "{logger_2}"
+                  timestamp: "{timestamp_2}"
+                - logger: "{logger_3}"
+                  timestamp: "{timestamp_3}"
+                  elapsed: "{elapsed_3}"
+    - hello: !CaptureHello &hello
+        destination: TEST1
+        message:
+            name: Player
+    - welcome: !CaptureWelcome &welcome
+        destination: "{id}"
+        message:
+            robot: "{name}"
+            team: "{team}"
+            id: "{id}"
+            video_address: "video_address"
+            video_port: "{video_port}"
+    - ping_client: !CapturePing &ping_client
+        destination: "{id}"
+        message:
+            timing:
+                - logger: "{logger_1}"
+                  timestamp: "{timestamp_1}"
+    - pong_client: !CapturePong &pong_client
+        destination: "{id}"
+        message:
+            timing:
+                - logger: "{logger_1}"
+                  timestamp: "{timestamp_1}"
+                  elapsed: "{elapsed_1}"
+                - logger: "{logger_2}"
+                  timestamp: "{timestamp_2}"
+                  elapsed: "{elapsed_2}"
+                - logger: "{logger_3}"
+                  timestamp: "{timestamp_3}"
+                  elapsed: "{elapsed_3}"
+
+sockets:
+    - !SocketPush &push
+        port: 9001
+        bind: no
+    - !SocketSubscribe &subscribe
+        port: 9000
+        bind: no
+    - !SocketPush &push_client
+        port: 9001
+        bind: no
+    - !SocketSubscribe &subscribe_client
+        port: 9000
+        bind: no
+
+threads:
+    - !Thread
+        name: "fake proxy"
+        loop: False
+        in_socket: *subscribe
+        out_socket: *push
+        flow:
+            - !Out
+                message: *register
+                arguments:
+                    id: "random_id"
+            - !In
+                message: *registered
+            - !Out
+                message: *server_robot_state
+                arguments:
+                    id: "{Registered[0].robot_id}"
+            - !In
+                message: *ping
+            - !Out
+                message: *pong
+                arguments:
+                    id: "{Registered[0].robot_id}"
+                    logger_1: "{Ping[-1].logger_1}"
+                    timestamp_1: "{Ping[-1].timestamp_1}"
+                    logger_2: "{Ping[-1].logger_2}"
+                    timestamp_2: "{Ping[-1].timestamp_2}"
+                    logger_3: "fake proxy"
+                    timestamp_3: "42"
+                    elapsed_3: "5"
+    - !Thread
+        name: "fake client"
+        loop: False
+        in_socket: *subscribe_client
+        out_socket: *push_client
+        flow:
+            - !Out
+                message: *hello
+            - !In
+                message: *welcome
+            - !Out
+                message: *ping_client
+                arguments:
+                    id: "{Welcome[0].id}"
+                    logger_1: "client"
+                    timestamp_1: "31"
+            - !In
+                message: *pong_client
