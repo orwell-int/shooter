@@ -218,9 +218,9 @@ class Capture(object):
     def compute_differences(self, other):
         differences = []
         captured = {}
-        if (self.captured_yaml_tag != other.yaml_tag):
+        if (self.yaml_tag != other.yaml_tag):
             differences.append(
-                ("@name", self.captured_yaml_tag, other.yaml_tag))
+                ("@name", self.yaml_tag, other.yaml_tag))
         if (self.destination != other.destination):
             differences.append(
                 ("@destination", self.destination, other.destination))

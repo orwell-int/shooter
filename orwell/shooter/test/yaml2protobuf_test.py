@@ -210,8 +210,12 @@ message: !CaptureInput
                      pb_message.fire.weapon2)
         diffs = message1.compute_differences(message2)
         sys.stderr.write(str(diffs) + "\n")
+        # the name differs because we did not go thourgh the standard path
+        # that removes the Capture part in the name.
         assert_equal(
-            [('@destination', 'TEST1', None), ('/move/left', left, new_left)],
+            [('@name', u'!CaptureInput', u'!Input'),
+             ('@destination', 'TEST1', None),
+             ('/move/left', left, new_left)],
             diffs)
         sys.stderr.write(str(message1.captured) + "\n")
         assert_equal([{'right': right}], message1.captured)

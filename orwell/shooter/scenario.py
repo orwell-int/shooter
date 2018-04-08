@@ -209,7 +209,13 @@ class In(yaml.YAMLObject, Exchange):
                 self.message.raw = message._pb_message
                 # print("type(self.message) = " + str(type(self.message)))
                 # print("id(self.message) = " + str(hex(id(self.message))))
-                self.message.compute_differences(message)
+                differences = self.message.compute_differences(message)
+                logger.info("differences = " + str(differences))
+                # @TODO: implement exact match
+                if (differences):
+                    # zmq_message = None
+                    pass
+                # else:
                 self._repository.add_received_message(self.message)
         return zmq_message, zmq_message is not None
 
