@@ -24,6 +24,9 @@ def main(argv=sys.argv[1:]):
     arguments = parser.parse_args()
     log = logging.getLogger(__name__)
     handler = logging.StreamHandler()
+    formatter = logging.Formatter(
+            '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+    handler.setFormatter(formatter)
     log.addHandler(handler)
     if (arguments.verbose):
         log.setLevel(logging.DEBUG)

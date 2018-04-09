@@ -193,7 +193,7 @@ class In(yaml.YAMLObject, Exchange):
 
     def step(self):
         logger = logging.getLogger(__name__)
-        logger.info("In.step")
+        logger.debug("In.step")
         try:
             zmq_message = self._in_socket.recv()
         except Exception as ex:
@@ -410,7 +410,7 @@ class Thread(yaml.YAMLObject):
     def step(self):
         logger = logging.getLogger(__name__)
         if (self.has_more_steps):
-            logger.info("In thread '{name}' at step {index}".format(
+            logger.debug("In thread '{name}' at step {index}".format(
                 name=self.name, index=self.index))
             result, inc = self.flow[self.index].step()
             logger.debug(
@@ -535,6 +535,9 @@ class UserInput(yaml.YAMLObject):
 def configure_logging(verbose):
     logger = logging.getLogger(__name__)
     handler = logging.StreamHandler()
+    formatter = logging.Formatter(
+            '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+    handler.setFormatter(formatter)
     logger.addHandler(handler)
     if (verbose):
         logger.setLevel(logging.DEBUG)
