@@ -1,6 +1,6 @@
 env/bin/activate:
 	virtualenv -p python env
-	. env/bin/activate && pip install -r requirements.txt && pip install -e .
+	. env/bin/activate && pip install -r requirements.txt
 
 develop: env/bin/activate
 	git submodule update --init
