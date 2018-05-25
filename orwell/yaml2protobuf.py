@@ -218,9 +218,9 @@ class Capture(object):
     def compute_differences(self, other):
         differences = []
         captured = {}
-        if (self.captured_yaml_tag != other.yaml_tag):
+        if (self.yaml_tag != other.yaml_tag):
             differences.append(
-                ("@name", self.captured_yaml_tag, other.yaml_tag))
+                ("@name", self.yaml_tag, other.yaml_tag))
         if (self.destination != other.destination):
             differences.append(
                 ("@destination", self.destination, other.destination))
@@ -434,6 +434,9 @@ def get_classes_from_module(module):
 def configure_logging(verbose):
     logger = logging.getLogger(__name__)
     handler = logging.StreamHandler()
+    formatter = logging.Formatter(
+            '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+    handler.setFormatter(formatter)
     logger.addHandler(handler)
     if (verbose):
         logger.setLevel(logging.DEBUG)

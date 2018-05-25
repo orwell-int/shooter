@@ -193,7 +193,7 @@ class In(yaml.YAMLObject, Exchange):
 
     def step(self):
         logger = logging.getLogger(__name__)
-        logger.info("In.step")
+        logger.debug("In.step")
         try:
             zmq_message = self._in_socket.recv()
         except Exception as ex:
@@ -209,7 +209,13 @@ class In(yaml.YAMLObject, Exchange):
                 self.message.raw = message._pb_message
                 # print("type(self.message) = " + str(type(self.message)))
                 # print("id(self.message) = " + str(hex(id(self.message))))
-                self.message.compute_differences(message)
+                differences = self.message.compute_differences(message)
+                logger.info("differences = " + str(differences))
+                # @TODO: implement exact match
+                if (differences):
+                    # zmq_message = None
+                    pass
+                # else:
                 self._repository.add_received_message(self.message)
         return zmq_message, zmq_message is not None
 
@@ -404,7 +410,7 @@ class Thread(yaml.YAMLObject):
     def step(self):
         logger = logging.getLogger(__name__)
         if (self.has_more_steps):
-            logger.info("In thread '{name}' at step {index}".format(
+            logger.debug("In thread '{name}' at step {index}".format(
                 name=self.name, index=self.index))
             result, inc = self.flow[self.index].step()
             logger.debug(
@@ -529,6 +535,9 @@ class UserInput(yaml.YAMLObject):
 def configure_logging(verbose):
     logger = logging.getLogger(__name__)
     handler = logging.StreamHandler()
+    formatter = logging.Formatter(
+            '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+    handler.setFormatter(formatter)
     logger.addHandler(handler)
     if (verbose):
         logger.setLevel(logging.DEBUG)
