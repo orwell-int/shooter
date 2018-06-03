@@ -1,0 +1,117 @@
+messages:
+    - register: !CaptureRegister &register
+        destination: "{id}"
+        message:
+            temporary_robot_id: "{temp_id}"
+            video_url: nc:192.168.0.17:5000
+            image: this is an image of the robot
+    - registered: !CaptureRegistered &registered
+        destination: "{id}"
+        message:
+            robot_id: "looser_robot"
+            team: "Loosers"
+    - hello: !CaptureHello &hello
+        destination: "{id}"
+        message:
+            name: "{name}"
+    - welcome: !CaptureWelcome &welcome
+        destination: "{id}"
+        message:
+            robot: "looser_robot"
+            team: Loosers
+            id: "real_id_1"
+            video_address: "http://video.url"
+            video_port: 123
+    - game_state_start: !CaptureGameState &game_state_start
+        destination: "{id}"
+        message:
+            playing: 1
+            seconds: 42
+            teams:
+                - name: "Loosers"
+                  score: 0
+                  num_players: 1
+                  players:
+                      - "looser_robot"
+    - game_state_stop: !CaptureGameState &game_state_stop
+        destination: "{id}"
+        message:
+            playing: 0
+            seconds: 0
+            teams:
+                - name: "Loosers"
+                  score: 0
+                  num_players: 1
+                  players:
+                      - "looser_robot"
+            winner: ""
+    - input: !CaptureInput &input
+       destination: "{id}"
+       message:
+           move:
+              left: 10
+              right: 0
+           fire:
+              weapon1: "{weapon1}"
+              weapon2: "{weapon2}"
+
+sockets:
+    - !SocketPull &pull
+        port: 9001
+        bind: yes
+    - !SocketPublish &publish
+        port: 9000
+        bind: yes
+    - !SocketPush &push
+        port: 9001
+    - !SocketSubscribe &subscribe
+        port: 9000
+
+threads:
+    - !Thread
+        name: "fake server"
+        loop: False
+        in_socket: *pull
+        out_socket: *publish
+        flow:
+            - !In
+                message: *register
+            - !Out
+                message: *registered
+                arguments:
+                    id: "{Register[0].temp_id}"
+                    temp_id: "robot_1"
+            - !In
+                message: *hello
+            - !Out
+                message: *welcome
+                arguments:
+                    id: "{Hello[0].destination}"
+            - !Out
+                message: *game_state_start
+                arguments:
+                    id: "looser_robot"
+            - !Out
+                message: *input
+                arguments:
+                    id: "looser_robot"
+                    weapon1: "True"
+                    weapon2: "False"
+            - !Out
+                message: *game_state_stop
+                arguments:
+                    id: "looser_robot"
+
+    - !Thread
+        name: "fake robot"
+        loop: False
+        in_socket: *subscribe
+        out_socket: *push
+        flow:
+            - !Out
+                message: *register
+                arguments:
+                    id: "42"
+                    temp_id: "42"
+            - !In
+                message: *registered

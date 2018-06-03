@@ -1,0 +1,46 @@
+messages:
+    - register: !Register
+        message:
+            temporary_robot_id: "{temp_id}"
+            video_url: http://video.url:123
+            image: this is an image of the robot
+    - registered: !Registered
+        message:
+            robot_id: "{true_id}"
+            team: Zero
+    - input: !Input
+        message:
+            move:
+                left: 0
+                right: 0
+            fire:
+                weapon1: False
+                weapon2: False
+    - hello: !Hello
+        message:
+            name: Player
+    - welcome: !Welcome
+        message:
+            robot: Nono
+            team: One
+            id: "{id}"
+            video_address: "http://fake.com"
+            video_port: 42
+
+
+threads:
+    - one:
+        - in:
+            message: hello
+        - out:
+            message: welcome 
+            arguments:
+                id: 123
+    - two:
+        - out:
+            message: hello
+        - in:
+            message: welcome
+        - assert_equal:
+            - value: 123
+            - value: "{welcome[-1].id}"

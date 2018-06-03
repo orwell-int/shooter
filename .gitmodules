@@ -1,0 +1,7 @@
+[submodule "pbjson"]
+	path = pbjson
+	url = https://github.com/orwell-int/py-pb-converters.git
+	ignore = untracked
+[submodule "messages"]
+	path = messages
+	url = https://github.com/orwell-int/messages.git

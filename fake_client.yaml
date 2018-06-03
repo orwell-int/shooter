@@ -1,0 +1,72 @@
+messages:
+    - hello: !CaptureHello &hello
+        destination: TEST1
+        message:
+            name: Player
+    - welcome: !CaptureWelcome &welcome
+        destination: "{id}"
+        message:
+            robot: "{name}"
+            team: "{team}"
+            id: "{id}"
+            video_address: "video_address"
+            video_port: "{video_port}"
+    - input: !CaptureInput &input
+       destination: "{id}"
+       message:
+           move:
+              left: "{left}"
+              right: "{right}"
+           fire:
+              weapon1: "{weapon1}"
+              weapon2: "{weapon2}"
+
+sockets:
+    - !SocketSubscribe &subscribe
+        port: 9000
+        bind: no
+    - !SocketPush &push
+        port: 9001
+        bind: no
+
+threads:
+    - !Thread
+        name: "fake client"
+        loop: False
+        in_socket: *subscribe
+        out_socket: *push
+        flow:
+            - !Out
+                message: *hello
+            - !In
+                message: *welcome
+            - !UserInput
+                text: "About to send firest input (fire weapon 1)"
+            - !Out
+                message: *input
+                arguments:
+                    id: "{Welcome[0].id}"
+                    left: 0
+                    right: 0
+                    weapon1: "True"
+                    weapon2: "False"
+            - !Sleep
+                seconds: 2
+            - !Out
+                message: *input
+                arguments:
+                    id: "{Welcome[0].id}"
+                    left: 1
+                    right: -1
+                    weapon1: "False"
+                    weapon2: "False"
+            - !Sleep
+                seconds: 2
+            - !Out
+                message: *input
+                arguments:
+                    id: "{Welcome[0].id}"
+                    left: 0
+                    right: 0
+                    weapon1: "False"
+                    weapon2: "False"

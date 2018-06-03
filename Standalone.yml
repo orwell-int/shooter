@@ -1,0 +1,55 @@
+messages:
+    - hello: !CaptureHello &hello
+        destination: TEST1
+        message:
+            name: Player
+    - welcome: !CaptureWelcome &welcome
+        destination: "{id}"
+        message:
+            robot: Nono
+            team: One
+            id: "{id}"
+            video_address: "http://fake.com"
+            video_port: 42
+
+sockets:
+    - !SocketPush &push_one
+        port: 9001
+        bind: yes
+    - !SocketPull &pull_one
+        port: 9000
+        bind: yes
+    - !SocketPush &push_two
+        port: 9000
+        bind: no
+    - !SocketPull &pull_two
+        port: 9001
+        bind: no
+
+threads:
+    - !Thread
+        name: "one"
+        loop: False
+        in_socket: *pull_one
+        out_socket: *push_one
+        flow:
+            - !Out
+                message: *hello
+            - !In
+                message: *welcome
+            - !Equal
+                values:
+                    - "123"
+                    - "{Welcome[-1].id}"
+    - !Thread
+        name: "two"
+        loop: False
+        in_socket: *pull_two
+        out_socket: *push_two
+        flow:
+            - !In
+                message: *hello
+            - !Out
+                message: *welcome
+                arguments:
+                    id: 123

@@ -1,0 +1,25 @@
+messages:
+    - player_state: !CapturePlayerState &player_state
+        destination: robot_one
+        message:
+            item:
+                type: 1
+                name: "red"
+                capture_status: 1
+                capturer: "A"
+
+sockets:
+    - !SocketSubscribe &subscribe_socket
+        port: 9000
+    - !SocketPush &push_socket
+        port: 9001
+
+threads:
+    - !Thread
+        name: "just send one player state message"
+        loop: False
+        in_socket: *subscribe_socket
+        out_socket: *push_socket
+        flow:
+            - !Out
+                message: *player_state
