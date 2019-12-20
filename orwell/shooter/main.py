@@ -28,7 +28,7 @@ def main(argv=sys.argv[1:]):
             '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
     handler.setFormatter(formatter)
     log.addHandler(handler)
-    if (arguments.verbose):
+    if arguments.verbose:
         log.setLevel(logging.DEBUG)
     else:
         log.setLevel(logging.INFO)
@@ -47,5 +47,5 @@ def main(argv=sys.argv[1:]):
                 time.sleep(delay)
 
 
-if ("__main__" == __name__):
+if "__main__" == __name__:
     sys.exit(main(sys.argv[1:]))  # pragma: no coverage

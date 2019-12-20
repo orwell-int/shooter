@@ -143,7 +143,7 @@ message: !CaptureInput {{ "message": {{ "move": {{ "left": {left},
                     sys.stderr.write(
                         "   " + "\n   ".join(
                             str(message.protobuf_message).split("\n")) + "\n")
-                    if ("register" == name):
+                    if "register" == name:
                         message_register_in = message.protobuf_message
                     sys.stderr.write(
                         "   extracted = " + str(message.key_map) + "\n")
@@ -288,5 +288,5 @@ def test_generate():
 def main():
     MainTest.test_key_map()
 
-if ("__main__" == __name__):
+if "__main__" == __name__:
     main()

@@ -46,7 +46,7 @@ messages:
             robot: "{name}"
             team: "{team}"
             id: "{id}"
-            video_address: "video_address"
+            video_address: "{video_address}"
             video_port: "{video_port}"
     - ping_client: !CapturePing &ping_client
         destination: "{id}"
