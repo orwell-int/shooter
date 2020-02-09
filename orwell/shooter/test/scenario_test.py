@@ -152,7 +152,7 @@ threads:
             except Exception as received_exception:
                 expected = ("Failure at index 2 in thread 'fake client'.",)
                 thrown = (expected == received_exception.args)
-                if (not thrown):
+                if not thrown:
                     sys.stdout.write("Exception different from expectation.\n")
                     print("Received:", received_exception)
                 else:
@@ -194,7 +194,7 @@ class CaptureRepositoryTest(unittest.TestCase):
     @staticmethod
     def _check(repo, pattern, expected):
         is_exception = isinstance(expected, BaseException)
-        if (is_exception):
+        if is_exception:
             exception_type = type(expected)
             try:
                 repo.expand(pattern)
@@ -232,5 +232,5 @@ def main():
     #ScenarioTest.test_3()
     # CaptureRepositoryTest.test_1()
 
-if ("__main__" == __name__):
+if "__main__" == __name__:
     main()

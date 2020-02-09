@@ -56,16 +56,16 @@ class Base(object):
 
     @property
     def protobuf_message(self):
-        if (not hasattr(self, '_message')):
+        if not hasattr(self, '_message'):
             self.load()
         return self._message
 
     def __getattribute__(self, attribute):
         message = object.__getattribute__(self, "message")
-        if ("message" == attribute):
+        if "message" == attribute:
             return message
         else:
-            if (attribute in message):
+            if attribute in message:
                 # this seems to never be visited but is kept just in case
                 return message[attribute]
             else:
@@ -79,7 +79,7 @@ class Base(object):
 
     @property
     def key_map(self):
-        if (not hasattr(self, '_key_map')):
+        if not hasattr(self, '_key_map'):
             path = []
             path_stack = [""]
             pb_stack = [self.protobuf_message]
@@ -87,7 +87,7 @@ class Base(object):
             first = True
             while (pb_stack):
                 message = pb_stack.pop()
-                if (path_stack):
+                if path_stack:
                     path.append(path_stack.pop())
                 for field in message.ListFields():
                     descriptor, value = field
@@ -102,7 +102,7 @@ class Base(object):
                         key = "/".join(path)
                         self._key_map[key] = value
                         path.pop()
-                if (not first):
+                if not first:
                     path.pop()
                 else:
                     first = False
@@ -117,7 +117,7 @@ Comparison = namedtuple('Comparison', 'key reference_value compared')
 class Capture(object):
     def __new__(cls, *args, **kwargs):
         instance = object.__new__(cls, *args, **kwargs)
-        if (not hasattr(instance, 'arguments')):
+        if not hasattr(instance, 'arguments'):
             setattr(instance, 'arguments', {})
         setattr(instance, 'captured', [])
         setattr(instance, '_pb_message', None)
@@ -130,22 +130,25 @@ class Capture(object):
 
     @staticmethod
     def create_from_zmq(zmq_message):
-        destination, message_type, payload = zmq_message.split(' ', 2)
+        destination, message_type, payload = zmq_message.split(b' ', 2)
+        message_type = message_type.decode("utf8")
+        destination = destination.decode("utf8")
         found = False
         for module in (
                 orwell.messages.controller_pb2,
                 orwell.messages.robot_pb2,
                 orwell.messages.server_game_pb2,
                 orwell.messages.server_web_pb2):
-            if (hasattr(module, message_type)):
+            if hasattr(module, message_type):
                 pb_klass = getattr(module, message_type)
                 found = True
                 break
-        if (not found):
+        if not found:
             raise Exception("Invalid message type: " + message_type)
         pb_message = pb_klass()
         pb_message.ParseFromString(payload)
-        klass = getattr(sys.modules[__name__], "Capture" + message_type)
+        klass = getattr(
+            sys.modules[__name__], "Capture" + message_type)
         capture = klass()
         capture._pb_message = pb_message
         capture.destination = destination
@@ -156,14 +159,14 @@ class Capture(object):
 
     @property
     def protobuf_message(self):
-        if (self._pb_message is None):
+        if self._pb_message is None:
             self._pb_message = self.fill(self.arguments)
             #self._pb_message = dict2pb(self.PROTOBUF_CLASS, self.message)
         return self._pb_message
 
     @property
     def key_map(self):
-        if (not hasattr(self, '_key_map')):
+        if not hasattr(self, '_key_map'):
             path = []
             path_stack = [""]
             dico_stack = [self.message]
@@ -171,11 +174,11 @@ class Capture(object):
             first = True
             while (dico_stack):
                 dico = dico_stack.pop()
-                if (path_stack):
+                if path_stack:
                     path.append(path_stack.pop())
                 for dico_key, value in dico.items():
                     path.append(dico_key)
-                    if (isinstance(value, dict)):
+                    if isinstance(value, dict):
                         # nested message
                         dico_stack.append(value)
                         path_stack.append(path.pop())
@@ -183,7 +186,7 @@ class Capture(object):
                         key = "/".join(path)
                         self._key_map[key] = value
                         path.pop()
-                if (not first):
+                if not first:
                     path.pop()
                 else:
                     first = False
@@ -194,34 +197,37 @@ class Capture(object):
             destination = self.destination.format(**dico)
         else:
             destination = self.destination
-        return " ".join((
+        destination = destination.encode("utf8")
+        message_type = self.PROTOBUF_CLASS.DESCRIPTOR.name.encode("utf8")
+        return b" ".join((
             destination,
-            self.PROTOBUF_CLASS.DESCRIPTOR.name,
+            message_type,
             self.fill(dico).SerializeToString()))
 
     def __getitem__(self, index):
         return self.captured[index]
 
     def __getattribute__(self, attribute):
-        if (hasattr(self, "message")):
-            message = object.__getattribute__(self, "message")
-            if ("message" == attribute):
-                return message
-            else:
-                if (attribute in message):
-                    return message[attribute]
-                else:
-                    return object.__getattribute__(self, attribute)
+        message = object.__getattribute__(self, "message")
+        if "message" == attribute:
+            return message
         else:
-            return object.__getattribute__(self, attribute)
+            if attribute in message:
+                return message[attribute]
+            else:
+                return object.__getattribute__(self, attribute)
+
+    # is called if message can not be found
+    def __getattr__(self, attribute):
+        return object.__getattribute__(self, attribute)
 
     def compute_differences(self, other):
         differences = []
         captured = {}
-        if (self.yaml_tag != other.yaml_tag):
+        if self.yaml_tag != other.yaml_tag:
             differences.append(
                 ("@name", self.yaml_tag, other.yaml_tag))
-        if (self.destination != other.destination):
+        if self.destination != other.destination:
             differences.append(
                 ("@destination", self.destination, other.destination))
 
@@ -243,12 +249,12 @@ class Capture(object):
                     key=key, value=reference_value, compared=compared))
             try:
                 other_value = compared[key]
-                if (isinstance(reference_value, dict)):
+                if isinstance(reference_value, dict):
                     for sub_key, sub_value in reference_value.items():
                         comparisons.append(
                             Comparison(sub_key, sub_value, other_value))
                     continue
-                elif (isinstance(reference_value, list)):
+                elif isinstance(reference_value, list):
                     for sub, sub_other in zip(reference_value, other_value):
                         for sub_key, sub_value in sub.items():
                             comparisons.append(
@@ -263,7 +269,7 @@ class Capture(object):
                         key=key,
                         value=reference_value,
                         other_value=other_value))
-            if (reference_value != other_value):
+            if reference_value != other_value:
                 if ((isinstance(reference_value, str)) and
                         (Base.CAPTURE_PATTERN.match(reference_value))):
                     capture_name = reference_value[1:-1]
@@ -289,9 +295,9 @@ class Capture(object):
             descriptor,
             new_descriptor):
         new_element = []
-        if (isinstance(destination_dico, dict)):
+        if isinstance(destination_dico, dict):
             destination_dico[key] = new_element
-        elif (isinstance(destination_dico, list)):
+        elif isinstance(destination_dico, list):
             destination_dico.append(new_element)
         for sub_value in value:
             self._fill_one(
@@ -310,9 +316,9 @@ class Capture(object):
             descriptor,
             new_descriptor):
         new_element = {}
-        if (isinstance(destination_dico, dict)):
+        if isinstance(destination_dico, dict):
             destination_dico[key] = new_element
-        elif (isinstance(destination_dico, list)):
+        elif isinstance(destination_dico, list):
             destination_dico.append(new_element)
         self._fill(
             translation_dico,
@@ -328,7 +334,7 @@ class Capture(object):
             destination_dico,
             descriptor,
             new_descriptor):
-        if (isinstance(value, str)):
+        if isinstance(value, str):
             value = value.format(**translation_dico)
         if (new_descriptor.type in
                 (pb_descriptor.FieldDescriptor.TYPE_DOUBLE,
@@ -350,9 +356,9 @@ class Capture(object):
         elif (pb_descriptor.FieldDescriptor.TYPE_BOOL
                 == new_descriptor.type):
             value = self._compute_bool(value)
-        if (isinstance(destination_dico, dict)):
+        if isinstance(destination_dico, dict):
             destination_dico[key] = value
-        elif (isinstance(destination_dico, list)):
+        elif isinstance(destination_dico, list):
             destination_dico.append(value)
 
     def _fill_one(
@@ -362,11 +368,11 @@ class Capture(object):
             value,
             destination_dico,
             descriptor):
-        if (isinstance(descriptor, pb_descriptor.Descriptor)):
+        if isinstance(descriptor, pb_descriptor.Descriptor):
             new_descriptor = descriptor.fields_by_name[key]
         else:
             new_descriptor = descriptor.message_type.fields_by_name[key]
-        if (isinstance(value, list)):
+        if isinstance(value, list):
             self._fill_list(
                 translation_dico,
                 key,
@@ -374,7 +380,7 @@ class Capture(object):
                 destination_dico,
                 descriptor,
                 new_descriptor)
-        elif (isinstance(value, dict)):
+        elif isinstance(value, dict):
             self._fill_dict(
                 translation_dico,
                 key,
@@ -438,7 +444,7 @@ def configure_logging(verbose):
             '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    if (verbose):
+    if verbose:
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
@@ -832,5 +838,5 @@ class CaptureGetGameState(yaml.YAMLObject, Capture):
 
 # [[[end]]]
 
-if ("__main__" == __name__):
+if "__main__" == __name__:
     print(generate())

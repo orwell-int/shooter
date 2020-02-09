@@ -105,7 +105,7 @@ class SocketSubscribe(yaml.YAMLObject, Socket):
 
     def build(self, zmq_context):
         super(self.__class__, self).build(zmq_context)
-        self._zmq_socket.setsockopt(zmq.SUBSCRIBE, "")
+        self._zmq_socket.setsockopt_string(zmq.SUBSCRIBE, "")
 
     def recv(self, *args, **kwargs):
         event = self._zmq_socket.poll(10)
@@ -457,7 +457,7 @@ class Scenario(object):
     """
 
     def __init__(self, yaml_content):
-        self._data = yaml.load(yaml_content)
+        self._data = yaml.load(yaml_content, Loader=yaml.FullLoader)
         self._messages = self._data["messages"]
         self._zmq_context = zmq.Context()
         self._threads = self._data["threads"]
