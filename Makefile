@@ -1,10 +1,10 @@
 env/bin/activate:
-	virtualenv -p python3 env
-	. env/bin/activate && pip install -r requirements.txt
+	python3 -m venv env
+	. env/bin/activate && pip install -U pip wheel && pip install -r requirements.txt
+	cd messages && python3 ./generate.py ../
 
 develop: env/bin/activate
 	git submodule update --init
-	cd messages && python3 ./generate.py ../
 
 test: develop
 	. env/bin/activate && nosetests
