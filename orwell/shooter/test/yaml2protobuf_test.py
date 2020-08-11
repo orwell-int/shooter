@@ -20,7 +20,7 @@ message: !CaptureHello
     message:
         name: {name}
 """.format(name=name)
-        data = yaml.load(yaml_content)
+        data = yaml.load(yaml_content, Loader=yaml.FullLoader)
         hello = data["message"]
         assert_equal(hello.name, name)
         payload = hello.protobuf_message.SerializeToString()
@@ -39,7 +39,7 @@ message: !CaptureHello
         name: {name}
         ready: {ready}
 """.format(name=name, ready=ready)
-        data = yaml.load(yaml_content)
+        data = yaml.load(yaml_content, Loader=yaml.FullLoader)
         hello = data["message"]
         assert_equal(hello.name, name)
         payload = hello.protobuf_message.SerializeToString()
@@ -91,7 +91,7 @@ message: !CaptureInput
             right=message.move.right,
             weapon1=message.fire.weapon1,
             weapon2=message.fire.weapon2)
-        data = yaml.load(yaml_content)
+        data = yaml.load(yaml_content, Loader=yaml.FullLoader)
         message2 = data["message"]
         assert_equal(message.move.left, message2.protobuf_message.move.left)
         assert_equal(message.move.right, message2.protobuf_message.move.right)
@@ -115,7 +115,7 @@ message: !CaptureInput {{ "message": {{ "move": {{ "left": {left},
             right=message.move.right,
             weapon1=message.fire.weapon1,
             weapon2=message.fire.weapon2)
-        data = yaml.load(yaml_content)
+        data = yaml.load(yaml_content, Loader=yaml.FullLoader)
         message2 = data["message"]
         assert_equal(message.move.left, message2.protobuf_message.move.left)
         assert_equal(message.move.right, message2.protobuf_message.move.right)
@@ -130,7 +130,7 @@ message: !CaptureInput {{ "message": {{ "move": {{ "left": {left},
         import os
         test_dir = os.path.dirname(os.path.realpath(__file__))
         with open(os.path.join(test_dir, "conf.yaml"), 'r') as input:
-            data = yaml.load(input.read())
+            data = yaml.load(input.read(), Loader=yaml.FullLoader)
             sys.stderr.write(str(data) + "\n")
             for dico in data["messages"]:
                 #sys.stderr.write(" " + str(dico) + "\n")
@@ -189,7 +189,7 @@ message: !CaptureInput
             left=pb_message.move.left,
             weapon1=pb_message.fire.weapon1,
             weapon2=pb_message.fire.weapon2)
-        data = yaml.load(yaml_content)
+        data = yaml.load(yaml_content, Loader=yaml.FullLoader)
         message1 = data["message"]
         sys.stderr.write("\n" + str(message1.key_map) + "\n")
         assert_equal(message1.key_map["/move/left"], pb_message.move.left)
@@ -232,7 +232,7 @@ class CaptureTest(unittest.TestCase):
         fake_message_type = "FakeMessageType"
         try:
             y2p.Capture.create_from_zmq("destination {} payload".format(
-                fake_message_type))
+                fake_message_type).encode("utf-8"))
         except Exception as exception:
             expected = Exception("Invalid message type: " + fake_message_type)
             assert_equal(repr(expected), repr(exception))
@@ -265,7 +265,7 @@ message: !CaptureGameState
             destination=destination,
             playing=playing,
             seconds=seconds)
-        data = yaml.load(yaml_content)
+        data = yaml.load(yaml_content, Loader=yaml.FullLoader)
         message = data["message"]
         looser_team = "Loosers"
         winner_team = "Winners"

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import setuptools
 
@@ -14,7 +14,7 @@ except ImportError:
 
 setuptools.setup(
     name='orwell.shooter',
-    version='0.0.1',
+    version='0.0.2',
     description='Small program to shoot messages for tests.',
     author='',
     author_email='',
@@ -35,6 +35,6 @@ setuptools.setup(
         'Operating System :: POSIX :: Linux',
         'Topic :: Utilities',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2.7'],
-    # not compatible with python 3.4 because of some dependencies
+        'Programming Language :: Python :: 3.6'],
+    python_requires='>=3.6.0',
 )

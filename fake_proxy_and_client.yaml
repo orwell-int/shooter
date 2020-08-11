@@ -40,6 +40,7 @@ messages:
         destination: TEST1
         message:
             name: Player
+            address: "5.6.7.8"
     - welcome: !CaptureWelcome &welcome
         destination: "{id}"
         message:
@@ -128,5 +129,15 @@ threads:
                     id: "{Welcome[0].id}"
                     logger_1: "client"
                     timestamp_1: "31"
+            # Add a sleep as the threads are mixing the inputs.
+            # The bug seems to be that the messages are received
+            # only by one thread, probably depending on which one
+            # is calling step first.
+            # Possibly a solution would be to dispatch to all threads
+            # and have only a single socket for each port.
+            # It is rather disapointing that ZMQ does not seem to
+            # handle this case directly though.
+            - !Sleep
+                seconds: 0
             - !In
                 message: *pong_client

@@ -1,20 +1,19 @@
 env/bin/activate:
-	virtualenv -p python env
-	. env/bin/activate && pip install -r requirements.txt && pip install -e .
+	virtualenv -p python3 env
+	. env/bin/activate && pip install -r requirements.txt
 
 develop: env/bin/activate
 	git submodule update --init
-	cd messages && ./generate.sh
-	cd orwell && [ -e messages ] || ln -s ../messages/orwell/messages .
+	cd messages && python3 ./generate.py ../
 
 test: develop
 	. env/bin/activate && nosetests
 
 coverage: env/bin/activate
-	. env/bin/activate && nosetests --with-coverage --cover-package=orwell --cover-tests
+	. env/bin/activate && nosetests --with-coverage --cover-erase --cover-branches --cover-package=orwell
 
 clean: env/bin/activate
 	. env/bin/activate && coverage erase
 
 start: env/bin/activate
-	. env/bin/activate && python ./orwell/shooter/main.py Standalone.yml -d 1
+	. env/bin/activate && python3 ./orwell/shooter/main.py Standalone.yml -d 1

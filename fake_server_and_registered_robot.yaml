@@ -66,10 +66,13 @@ sockets:
         port: 9001
     - !SocketSubscribe &subscribe
         port: 9000
+    - !SocketReply &reply
+        port: 9004
+        bind: yes
 
 threads:
     - !Thread
-        name: "fake server"
+        name: "fake server (asynchronous)"
         loop: False
         in_socket: *pull
         out_socket: *publish
@@ -101,6 +104,19 @@ threads:
                 message: *game_state_stop
                 arguments:
                     id: "looser_robot"
+
+    - !Thread
+        name: "fake server (synchronous)"
+        loop: False
+        in_socket: *reply
+        out_socket: *reply
+        flow:
+            - !In
+                message: *hello
+            - !Out
+                message: *welcome
+                arguments:
+                    id: "{Hello[0].destination}"
 
     - !Thread
         name: "fake robot"
