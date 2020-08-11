@@ -3,6 +3,8 @@ messages:
         destination: TEST1
         message:
             name: Player
+            ready: True
+            address: "1.2.3.4"
     - welcome: !CaptureWelcome &welcome
         destination: "{id}"
         message:
@@ -41,7 +43,7 @@ threads:
             - !In
                 message: *welcome
             - !UserInput
-                text: "About to send firest input (fire weapon 1)"
+                text: "About to send first input (fire weapon 1)"
             - !Out
                 message: *input
                 arguments:
@@ -56,8 +58,8 @@ threads:
                 message: *input
                 arguments:
                     id: "{Welcome[0].id}"
-                    left: 1
-                    right: -1
+                    left: 0.3
+                    right: -0.3
                     weapon1: "False"
                     weapon2: "False"
             - !Sleep

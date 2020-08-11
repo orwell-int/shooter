@@ -60,16 +60,20 @@ class Base(object):
             self.load()
         return self._message
 
-    def __getattribute__(self, attribute):
-        message = object.__getattribute__(self, "message")
+    def __getattr__(self, attribute):
         if "message" == attribute:
-            return message
-        else:
-            if attribute in message:
-                # this seems to never be visited but is kept just in case
-                return message[attribute]
+            raise AttributeError
+        if (hasattr(self, "message")):
+            message = object.__getattribute__(self, "message")
+            if ("message" == attribute):
+                return message
             else:
-                return object.__getattribute__(self, attribute)
+                if (attribute in message):
+                    return message[attribute]
+                else:
+                    raise AttributeError
+        else:
+            return object.__getattr__(self, attribute)
 
     def __repr__(self):
         return "%s(%s)" % (
@@ -147,8 +151,7 @@ class Capture(object):
             raise Exception("Invalid message type: " + message_type)
         pb_message = pb_klass()
         pb_message.ParseFromString(payload)
-        klass = getattr(
-            sys.modules[__name__], "Capture" + message_type)
+        klass = getattr(sys.modules[__name__], "Capture" + message_type)
         capture = klass()
         capture._pb_message = pb_message
         capture.destination = destination
@@ -207,19 +210,20 @@ class Capture(object):
     def __getitem__(self, index):
         return self.captured[index]
 
-    def __getattribute__(self, attribute):
-        message = object.__getattribute__(self, "message")
-        if "message" == attribute:
-            return message
-        else:
-            if attribute in message:
-                return message[attribute]
-            else:
-                return object.__getattribute__(self, attribute)
-
-    # is called if message can not be found
     def __getattr__(self, attribute):
-        return object.__getattribute__(self, attribute)
+        if "message" == attribute:
+            raise AttributeError
+        if (hasattr(self, "message")):
+            message = object.__getattribute__(self, "message")
+            if ("message" == attribute):
+                return message
+            else:
+                if (attribute in message):
+                    return message[attribute]
+                else:
+                    raise AttributeError
+        else:
+            return object.__getattr__(self, attribute)
 
     def compute_differences(self, other):
         differences = []
@@ -430,10 +434,13 @@ def get_classes_from_module(module):
     """
     classes_and_modules = []
     class_descriptions = inspect.getmembers(module, inspect.isclass)
+    # cutting the end allows to find classes in the common_pb2 module
+    # this is quite ugly compared to the python2 version where
+    # klass.__module__ containted the full module
+    module_head = module.__name__[:module.__name__.rfind(".") + 1]
     for class_description in class_descriptions:
         name, klass = class_description
-        module = klass.__module__
-        classes_and_modules.append((name, module))
+        classes_and_modules.append((name, module_head + klass.__module__))
     return classes_and_modules
 
 
@@ -494,7 +501,7 @@ full_path = os.path.abspath(inspect.getfile(inspect.currentframe()))
 plus_index = full_path.rfind('+')
 real_path = full_path[:plus_index]
 print('exec(%s)' % real_path)
-exec(open(real_path, 'r'))
+exec(open(real_path, 'r').read())
 import cog
 cog.outl(generate())
 # ]]] """
