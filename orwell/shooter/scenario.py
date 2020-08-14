@@ -6,6 +6,8 @@ import re
 import time
 import logging
 
+global THREAD
+THREAD = ""
 
 class Socket(object):
     """Base class for zmq socket wrappers.
@@ -13,6 +15,8 @@ class Socket(object):
     This should not be instantiated but contains some methods common to
     the derived classes.
     """
+
+    SOCKETS = {}
 
     @property
     def connection_string(self):
@@ -34,31 +38,34 @@ class Socket(object):
             return "publish"
         if (zmq.SUB == self.zmq_method):
             return "subsccribe"
+        if (zmq.REQ == self.zmq_method):
+            return "request"
+        if (zmq.REP == self.zmq_method):
+            return "reply"
 
     def build(self, zmq_context):
         logger = logging.getLogger(__name__)
         bind = getattr(self, 'bind', False)
+        connection_string = self.connection_string
+        key = connection_string + "#" + str(bind)
         self.bind = bind
-        self._zmq_socket = zmq_context.socket(self.zmq_method)
-        self._zmq_socket.setsockopt(zmq.LINGER, 1)
-        if (bind):
-            logger.info(
-                "Bind on " + self.connection_string + " " + self.mode)
-            self._zmq_socket.bind(self.connection_string)
+        if (key in Socket.SOCKETS):
+            self._zmq_socket = Socket.SOCKETS[key]
         else:
-            logger.info(
-                "Connect to " + self.connection_string + " " + self.mode)
-            self._zmq_socket.connect(self.connection_string)
+            self._zmq_socket = zmq_context.socket(self.zmq_method)
+            self._zmq_socket.setsockopt(zmq.LINGER, 1)
+            if (bind):
+                logger.info(
+                    THREAD + "Bind on " + self.connection_string + " " + self.mode)
+                self._zmq_socket.bind(self.connection_string)
+            else:
+                logger.info(
+                    THREAD + "Connect to " + self.connection_string + " " + self.mode)
+                self._zmq_socket.connect(self.connection_string)
+            Socket.SOCKETS[key] = self._zmq_socket
 
     def __repr__(self):
         return "{%s | %s}" % (self.yaml_tag[1:], self.connection_string)
-
-    def terminate(self):
-        if (self.bind):
-            self._zmq_socket.unbind(self.connection_string)
-        else:
-            self._zmq_socket.disconnect(self.connection_string)
-        self._zmq_socket.close()
 
 
 class SocketPull(yaml.YAMLObject, Socket):
@@ -90,7 +97,7 @@ class SocketPush(yaml.YAMLObject, Socket):
 
     def send(self, data):
         logger = logging.getLogger(__name__)
-        logger.info("SocketPush.send({})".format(repr(data)))
+        logger.info(THREAD + "SocketPush.send({})".format(repr(data)))
         self._zmq_socket.send(data)
 
 
@@ -110,7 +117,7 @@ class SocketSubscribe(yaml.YAMLObject, Socket):
     def recv(self, *args, **kwargs):
         event = self._zmq_socket.poll(10)
         logger = logging.getLogger(__name__)
-        logger.debug("event = " + str(event))
+        logger.debug(THREAD + "event = " + str(event))
         if (zmq.POLLIN == event):
             return self._zmq_socket.recv(*args, **kwargs)
         else:
@@ -128,7 +135,31 @@ class SocketPublish(yaml.YAMLObject, Socket):
 
     def send(self, data):
         logger = logging.getLogger(__name__)
-        logger.info("SocketPublish.send({})".format(repr(data)))
+        logger.info(THREAD + "SocketPublish.send({})".format(repr(data)))
+        self._zmq_socket.send(data)
+
+
+class SocketReply(yaml.YAMLObject, Socket):
+    """To be used in YAML.
+
+    Wrapper for zmq reply socket.
+    """
+
+    yaml_tag = u'!SocketReply'
+    zmq_method = zmq.REP
+
+    def recv(self, *args, **kwargs):
+        event = self._zmq_socket.poll(10)
+        logger = logging.getLogger(__name__)
+        logger.debug(THREAD + "event = " + str(event))
+        if (zmq.POLLIN == event):
+            return self._zmq_socket.recv(*args, **kwargs)
+        else:
+            return None
+
+    def send(self, data):
+        logger = logging.getLogger(__name__)
+        logger.info(THREAD + "SocketReply.send({})".format(repr(data)))
         self._zmq_socket.send(data)
 
 
@@ -171,10 +202,9 @@ class Exchange(object):
     """
 
     def __repr__(self):
-        return "{%s | message: %s ; arguments: %s}" % (
+        return "{%s | message: %s}" % (
             self.yaml_tag,
-            str(self.message.yaml_tag),
-            str(self.arguments))
+            str(self.message.yaml_tag))
 
     def build(self, repository, in_socket, out_socket):
         self._in_socket = in_socket
@@ -193,16 +223,18 @@ class In(yaml.YAMLObject, Exchange):
 
     def step(self):
         logger = logging.getLogger(__name__)
-        logger.debug("In.step")
+        logger.debug(THREAD + "In.step")
         try:
             zmq_message = self._in_socket.recv()
         except Exception as ex:
-            logger.warning("Exception in In.step:" + str(ex))
+            logger.warning(THREAD + "Exception in In.step:" + str(ex))
             zmq_message = None
         if (zmq_message):
-            logger.info("received zmq message %s" % repr(zmq_message))
+            logger.info(THREAD + "received zmq message %s" % repr(zmq_message))
             message = yaml2protobuf.Capture.create_from_zmq(zmq_message)
             if (message.message_type != self.message.message_type):
+                logger.info(THREAD + "message type does not match %s"
+                        % self.message.message_type)
                 zmq_message = None
             else:
                 self.message.destination = message.destination
@@ -210,7 +242,7 @@ class In(yaml.YAMLObject, Exchange):
                 # print("type(self.message) = " + str(type(self.message)))
                 # print("id(self.message) = " + str(hex(id(self.message))))
                 differences = self.message.compute_differences(message)
-                logger.info("differences = " + str(differences))
+                logger.info(THREAD + "differences = " + str(differences))
                 # @TODO: implement exact match
                 if (differences):
                     # zmq_message = None
@@ -235,11 +267,11 @@ class Out(yaml.YAMLObject, Exchange):
 
     def step(self):
         logger = logging.getLogger(__name__)
-        logger.info("Out.step")
-        logger.debug("arguments = " + str(self.arguments))
+        logger.info(THREAD + "Out.step")
+        logger.debug(THREAD + "arguments = " + str(self.arguments))
         expanded_arguments = {key: self._repository.expand(value)
                               for key, value in self.arguments.items()}
-        logger.debug("expanded arguments = " + str(expanded_arguments))
+        logger.debug(THREAD + "expanded arguments = " + str(expanded_arguments))
         self._out_socket.send(
             self.message.encode_zmq_message(expanded_arguments))
         return None, True
@@ -262,7 +294,7 @@ class Equal(yaml.YAMLObject):
 
     def step(self, *args):
         logger = logging.getLogger(__name__)
-        logger.info("Equal.step")
+        logger.info(THREAD + "Equal.step")
         reference = None
         all_equal = True
         for value in self.values:
@@ -272,7 +304,7 @@ class Equal(yaml.YAMLObject):
             else:
                 if (reference != value):
                     logger.warning(
-                        "Values differ: " + str(reference) + " " + str(value))
+                        THREAD + "Values differ: " + str(reference) + " " + str(value))
                     all_equal = False
                     break
         return (all_equal, True)
@@ -298,7 +330,7 @@ class Absent(yaml.YAMLObject):
 
     def step(self, *args):
         logger = logging.getLogger(__name__)
-        logger.info("Absent.step")
+        logger.info(THREAD + "Absent.step")
         reference = None
         absent = True
         for value in self.values:
@@ -307,7 +339,7 @@ class Absent(yaml.YAMLObject):
                 reference = value
             else:
                 if (value in reference):
-                    logger.warning("Absent not verified:", reference, value)
+                    logger.warning(THREAD + "Absent not verified:", reference, value)
                     absent = False
                     break
         return (absent, True)
@@ -328,8 +360,8 @@ class CaptureConverter(object):
         self._values = {}
         self.raw = raw
         logger = logging.getLogger(__name__)
-        logger.debug("capture_list")
-        logger.debug(capture_list)
+        logger.debug(THREAD + "capture_list")
+        logger.debug(THREAD + str(capture_list))
         for dico in capture_list:
             for key, value in dico.items():
                 if (key in self._values):
@@ -373,20 +405,20 @@ class CaptureRepository(object):
 
     def expand(self, string):
         logger = logging.getLogger(__name__)
-        logger.debug("string = '" + repr(string) + "'")
-        logger.debug("type(string) = '" + str(type(string)) + "'")
+        logger.debug(THREAD + "string = '" + repr(string) + "'")
+        logger.debug(THREAD + "type(string) = '" + str(type(string)) + "'")
         if ((isinstance(string, str)) and
                 (CaptureRepository.eval_regexp.match(string))):
             string_without_brackets = string[1:-1]
             logger.debug(
-                "string_without_brackets = '" + string_without_brackets + "'")
+                THREAD + "string_without_brackets = '" + string_without_brackets + "'")
             value = str(eval(
                 string_without_brackets,
                 self._values_from_received_messages))
-            logger.debug("expanded string to value='" + value + "'")
+            logger.debug(THREAD + "expanded string to value='" + value + "'")
         else:
             value = string
-            logger.debug("copied string to value='" + str(value) + "'")
+            logger.debug(THREAD + "copied string to value='" + str(value) + "'")
         return value
 
 
@@ -397,6 +429,7 @@ class Thread(yaml.YAMLObject):
     """
 
     yaml_tag = u'!Thread'
+    max_name_len = 0
 
     def build(self, zmq_context):
         self.in_socket.build(zmq_context)
@@ -406,15 +439,20 @@ class Thread(yaml.YAMLObject):
             element.build(self._repository, self.in_socket, self.out_socket)
         if (not hasattr(self, "index")):
             self.index = 0
+        self._skipped = False
+        if (len(self.name) > Thread.max_name_len):
+            Thread.max_name_len = len(self.name)
 
     def step(self):
         logger = logging.getLogger(__name__)
+        global THREAD
+        THREAD = "{:<{:}} | ".format(self.name, Thread.max_name_len)
         if (self.has_more_steps):
-            logger.debug("In thread '{name}' at step {index}".format(
+            logger.debug(THREAD + "In thread '{name}' at step {index}".format(
                 name=self.name, index=self.index))
             result, inc = self.flow[self.index].step()
             logger.debug(
-                "In thread '{name}': "
+                THREAD + "In thread '{name}': "
                 "index = {index} ; result = {result} ; inc = {inc}".format(
                     name=self.name,
                     index=self.index,
@@ -429,15 +467,14 @@ class Thread(yaml.YAMLObject):
                 if (self.loop):
                     self.index %= len(self.flow)
         else:
-            logger.info("Skipped thread '{name}'".format(name=self.name))
+            if (not self._skipped):
+                logger.info(THREAD + "Skipped thread '{name}'".format(
+                    name=self.name))
+                self._skipped = True
 
     @property
     def has_more_steps(self):
         return (self.index < len(self.flow))
-
-    def terminate(self):
-        self.in_socket.terminate()
-        self.out_socket.terminate()
 
     def __repr__(self):
         return "{Thread | in_socket = %s ; out_socket = %s ; flow = %s}" % (
@@ -452,8 +489,7 @@ class Scenario(object):
 
     The other classes are only helping build a scenario in YAML which is
     wrapped by this class.
-    This is implemented as a context manager so that users do not have to
-    remember to call terminate when done to clean zmq objects.
+    This is implemented as a context manager.
     """
 
     def __init__(self, yaml_content):
@@ -482,13 +518,8 @@ class Scenario(object):
         return self
 
     def __exit__(self, exception_type, exception_value, traceback):
-        self.terminate()
-
-    def terminate(self):
-        for thread in self._threads:
-            thread.terminate()
-        self._zmq_context.term()
-
+        # nothing special to do when leaving the context manager
+        pass
 
 class Sleep(yaml.YAMLObject):
     """To be used in YAML.
@@ -503,7 +534,7 @@ class Sleep(yaml.YAMLObject):
 
     def step(self, *args):
         logger = logging.getLogger(__name__)
-        logger.info("Sleep.step")
+        logger.info(THREAD + "Sleep.step")
         time.sleep(self.seconds)
         return (None, True)
 
@@ -524,8 +555,8 @@ class UserInput(yaml.YAMLObject):
 
     def step(self, *args):
         logger = logging.getLogger(__name__)
-        logger.info("UserInput.step")
-        raw_input(self.text)
+        logger.info(THREAD + "UserInput.step")
+        input(self.text)
         return (None, True)
 
     def __repr__(self):
@@ -536,7 +567,7 @@ def configure_logging(verbose):
     logger = logging.getLogger(__name__)
     handler = logging.StreamHandler()
     formatter = logging.Formatter(
-            '%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+            '%(asctime)s %(name)-12s %(lineno)4d %(levelname)-8s %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     if (verbose):

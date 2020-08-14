@@ -179,7 +179,6 @@ threads:
                 == expected_exception.args)
             print(expected_exception)
         assert(thrown)
-        scenario.terminate()
 
 
 class FakeMessage(object):
@@ -229,7 +228,7 @@ class CaptureRepositoryTest(unittest.TestCase):
 def main():
     # ScenarioTest.test_1()
     ScenarioTest.test_2()
-    #ScenarioTest.test_3()
+    # ScenarioTest.test_3()
     # CaptureRepositoryTest.test_1()
 
 if "__main__" == __name__:
