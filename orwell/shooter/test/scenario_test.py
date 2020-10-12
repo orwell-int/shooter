@@ -12,6 +12,7 @@ messages:
         destination: TEST1
         message:
             name: "{player_name}"
+            address: "{address}"
     - welcome: !CaptureWelcome &welcome
         destination: "{id}"
         message:
@@ -56,6 +57,10 @@ threads:
                 values:
                     - "Player"
                     - "{Hello[-1].player_name}"
+            - !Equal
+                values:
+                    - "3.4.5.6"
+                    - "{Hello[-1].address}"
             - !Out
                 message: *welcome
                 arguments:
@@ -83,6 +88,7 @@ threads:
                 message: *hello
                 arguments:
                     player_name: "Player"
+                    address: "3.4.5.6"
             - !In
                 message: *welcome
             - !Equal
